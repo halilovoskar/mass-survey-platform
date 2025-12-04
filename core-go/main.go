@@ -16,20 +16,21 @@ func main() {
 		json.NewEncoder(w).Encode(response)
 	})
 	// GET /tests - возвращает список всех тестов
-	http.HandleFunc("/tests", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "Метод не разрешён", http.StatusMethodNotAllowed)
+	http.HandleFunc("/tests", AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := getUserIDFromContext(r)
+		if !ok {
+			http.Error(w, "Пользователь не авторизован", http.StatusUnauthorized)
 			return
 		}
-		// Преобразуем map в срез
-		testList := make([]Test, 0, len(tests))
+		var userTests []Test
 		for _, test := range tests {
-			testList = append(testList, test)
+			if test.OwnerID == userID {
+				userTests = append(userTests, test)
+			}
 		}
-
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(testList)
-	})
+		json.NewEncoder(w).Encode(userTests)
+	}))
 
 	log.Println("Server started on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
