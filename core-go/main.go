@@ -15,21 +15,57 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 	})
-	// GET /tests - возвращает список всех тестов
+	// Единый обработчик для /tests - поддерживает GET и POST
 	http.HandleFunc("/tests", AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r)
 		if !ok {
 			http.Error(w, "Пользователь не авторизован", http.StatusUnauthorized)
 			return
 		}
-		var userTests []Test
-		for _, test := range tests {
-			if test.OwnerID == userID {
-				userTests = append(userTests, test)
+
+		switch r.Method {
+		case http.MethodGet:
+			// Возвращаем список всех тестов пользователя
+			var userTests []Test
+			for _, test := range tests {
+				if test.OwnerID == userID {
+					userTests = append(userTests, test)
+				}
 			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(userTests)
+
+		case http.MethodPost:
+			// Создаём новый тест
+			var input struct {
+				Title string `json:"title"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+				http.Error(w, "Некорректный JSON", http.StatusBadRequest)
+				return
+			}
+			if input.Title == "" {
+				http.Error(w, "Поле title обязательно", http.StatusBadRequest)
+				return
+			}
+
+			// Генерируем новый ID и сохраняем
+			test := Test{
+				ID:      nextTestID,
+				Title:   input.Title,
+				OwnerID: userID,
+			}
+			tests[nextTestID] = test
+			nextTestID++
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(test)
+
+		default:
+			// Метод не поддерживается
+			http.Error(w, "Метод не разрешён", http.StatusMethodNotAllowed)
 		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(userTests)
 	}))
 
 	log.Println("Server started on http://localhost:8080")

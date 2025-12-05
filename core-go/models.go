@@ -16,4 +16,4 @@ var tests = map[int]Test{
 	4: {ID: 4, Title: "Тест на натурала", OwnerID: 100},
 }
 
-//var nextTestID = 3
+var nextTestID = 3
