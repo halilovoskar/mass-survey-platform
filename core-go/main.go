@@ -55,6 +55,7 @@ func main() {
 				Title:   input.Title,
 				OwnerID: userID,
 			}
+
 			tests[nextTestID] = test
 			nextTestID++
 
