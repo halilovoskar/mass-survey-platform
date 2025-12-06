@@ -27,11 +27,7 @@ func main() {
 		case http.MethodGet:
 			// Возвращаем список всех тестов пользователя
 			var userTests []Test
-			for _, test := range tests {
-				if test.OwnerID == userID {
-					userTests = append(userTests, test)
-				}
-			}
+			DB.Where("owner_id = ?", userID).Find(&userTests)
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(userTests)
 
@@ -49,15 +45,20 @@ func main() {
 				return
 			}
 
+			var existingTest Test
+			if err := DB.Where("title = ? AND owner_id = ?", input.Title, userID).First(&existingTest).Error; err == nil {
+				http.Error(w, "Тест с таким названием уже существует", http.StatusBadRequest)
+				return
+			}
 			// Генерируем новый ID и сохраняем
 			test := Test{
-				ID:      nextTestID,
 				Title:   input.Title,
 				OwnerID: userID,
 			}
-
-			tests[nextTestID] = test
-			nextTestID++
+			if err := DB.Create(&test).Error; err != nil {
+				http.Error(w, "Ошибка сохранения теста", http.StatusInternalServerError)
+				return
+			}
 
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusCreated)

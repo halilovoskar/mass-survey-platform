@@ -1,19 +1,27 @@
 package main
 
-// Test представляет опрос или тест
+import (
+	"gorm.io/gorm"
+)
+
 type Test struct {
-	ID      int    `json:"test_id"`
+	ID      int    `json:"test_id" gorm:"primaryKey"`
 	Title   string `json:"test_title"`
 	OwnerID int    `json:"creator_id"`
 }
 
-// Глобальные переменные — тоже можно здесь (или в main.go, но тогда ПОСЛЕ type)
-
-var tests = map[int]Test{
-	1: {ID: 1, Title: "Первый опрос", OwnerID: 100},
-	2: {ID: 2, Title: "Тест по Go", OwnerID: 100},
-	3: {ID: 3, Title: "Тест по C++", OwnerID: 100},
-	4: {ID: 4, Title: "Тест на натурала", OwnerID: 100},
+type Question struct {
+	ID     int    `json:"question_id" gorm:"primaryKey"`
+	TestID int    `json:"test_id"`
+	Text   string `json:"text"`
+	Type   string `json:"type"` // "single", "text", etc.
 }
 
-var nextTestID = 5
+type Answer struct {
+	ID         int    `json:"answer_id" gorm:"primaryKey"`
+	UserID     int    `json:"user_id"`
+	QuestionID int    `json:"question_id"`
+	Value      string `json:"value"`
+}
+
+var _ gorm.DeletedAt
