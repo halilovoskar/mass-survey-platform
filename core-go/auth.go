@@ -36,3 +36,10 @@ func getUserIDFromContext(r *http.Request) (int, bool) {
 	return userID, ok
 
 }
+
+// Подготовка к permissions (из JWT)
+// Пока я не получил настоящего JWT - пусть будет заглушка
+func hasPermission(r *http.Request, required string) bool {
+	// Сейчас: разрешаем всё (для разработки)
+	return true
+}

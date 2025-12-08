@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -32,6 +33,10 @@ func main() {
 
 		switch r.Method {
 		case http.MethodGet:
+			if !hasPermission(r, "test:list:read") {
+				http.Error(w, "Недостаточно прав", http.StatusForbidden)
+				return
+			}
 			var userTests []Test
 			DB.Where("owner_id = ?", userID).Find(&userTests)
 			w.Header().Set("Content-Type", "application/json")
@@ -209,7 +214,63 @@ func main() {
 			"user_id": userID,
 		})
 	})).Methods("POST")
+	// POST /tests/{test_id}/attempt - начать попытку прохождения
+	r.HandleFunc("/tests/{test_id}/attempt", AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		userID, _ := getUserIDFromContext(r)
 
+		vars := mux.Vars(r)
+		testID, err := strconv.Atoi(vars["test_id"])
+		if err != nil {
+			http.Error(w, "Некорректный ID теста", http.StatusBadRequest)
+			return
+		}
+		// Проверяем, что тест существует (доступен пользователю)
+		var test Test
+		if err := DB.Where("id = ?", testID).First(&test).Error; err != nil {
+			http.Error(w, "Тест не найден", http.StatusNotFound)
+			return
+		}
+		// Проверяем, не завершена ли уже попытка
+		var existing Attempt
+		if err := DB.Where("user_id = ? AND test_id = ? AND status = ?", userID, testID, "active").First(&existing).Error; err == nil {
+			http.Error(w, "У вас уже есть активная попытка", http.StatusConflict)
+			return
+		}
+		// Создаём новую попытку
+		attempt := Attempt{
+			UserID:    userID,
+			TestID:    testID,
+			Status:    "active",
+			StartedAt: time.Now(),
+		}
+		if err := DB.Create(&attempt).Error; err != nil {
+			http.Error(w, "Ошибка создания попытки", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(attempt)
+	})).Methods("POST")
+	// GET /attempts/{attempt_id}
+	r.HandleFunc("/attempts/{attempt_id}", AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		userID, _ := getUserIDFromContext(r)
+
+		attemptID, err := strconv.Atoi(mux.Vars(r)["attempt_id"])
+		if err != nil {
+			http.Error(w, "Некорректный ID попытки", http.StatusBadRequest)
+			return
+		}
+
+		var attempt Attempt
+		if err := DB.Where("id = ? AND user_id = ?", attemptID, userID).First(&attempt).Error; err != nil {
+			http.Error(w, "Попытка не найдена", http.StatusNotFound)
+			return
+		}
+		// Добавим вопросы к ответу (опционально)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(attempt)
+	})).Methods("GET")
 	// Запуск сервера
 	log.Println("Server started on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", r)) // ← ВАЖНО: не nil, а r

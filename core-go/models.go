@@ -1,9 +1,19 @@
 package main
 
 import (
+	"time"
+
 	"gorm.io/gorm"
 )
 
+type Attempt struct {
+	ID          int       `json:"attemted_id" gorm:"primaryKey"`
+	UserID      int       `json:"user_id"`
+	TestID      int       `json:"test_id"`
+	Status      string    `json:"status"`
+	StartedAt   time.Time `json:"started_at"`
+	CompletedAt time.Time `json:"completed_at,omitempty"`
+}
 type Test struct {
 	ID      int    `json:"test_id" gorm:"primaryKey"`
 	Title   string `json:"test_title"`
