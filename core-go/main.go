@@ -64,6 +64,7 @@ func main() {
 			test := Test{
 				Title:   input.Title,
 				OwnerID: userID,
+				Status:  "active",
 			}
 			if err := DB.Create(&test).Error; err != nil {
 				http.Error(w, "Ошибка сохранения теста", http.StatusInternalServerError)
@@ -216,7 +217,11 @@ func main() {
 	})).Methods("POST")
 	// POST /tests/{test_id}/attempt - начать попытку прохождения
 	r.HandleFunc("/tests/{test_id}/attempt", AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		userID, _ := getUserIDFromContext(r)
+		userID, ok := getUserIDFromContext(r)
+		if !ok {
+			http.Error(w, "Пользователь не авторизован", http.StatusUnauthorized)
+			return
+		}
 
 		vars := mux.Vars(r)
 		testID, err := strconv.Atoi(vars["test_id"])
@@ -226,8 +231,8 @@ func main() {
 		}
 		// Проверяем, что тест существует (доступен пользователю)
 		var test Test
-		if err := DB.Where("id = ?", testID).First(&test).Error; err != nil {
-			http.Error(w, "Тест не найден", http.StatusNotFound)
+		if err := DB.Where("id = ? AND status = ?", testID, "active").First(&test).Error; err != nil {
+			http.Error(w, "Тест не найден или неактивен", http.StatusNotFound)
 			return
 		}
 		// Проверяем, не завершена ли уже попытка
@@ -244,7 +249,8 @@ func main() {
 			StartedAt: time.Now(),
 		}
 		if err := DB.Create(&attempt).Error; err != nil {
-			http.Error(w, "Ошибка создания попытки", http.StatusInternalServerError)
+			log.Printf("Ошибка создания попытки: %v", err)
+			http.Error(w, "Ошибка сервера", http.StatusInternalServerError)
 			return
 		}
 

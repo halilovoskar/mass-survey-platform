@@ -18,6 +18,7 @@ type Test struct {
 	ID      int    `json:"test_id" gorm:"primaryKey"`
 	Title   string `json:"test_title"`
 	OwnerID int    `json:"creator_id"`
+	Status  string `json:"status"` // active or inactive
 }
 
 type Question struct {
