@@ -32,6 +32,7 @@ type Course struct {
 type Test struct {
 	gorm.Model
 	ID           int       `gorm:"primaryKey" json:"test_id"`
+	OwnerID      string    `json:"owner_id" gorm:"type:varchar(64)"`
 	TestName     string    `json:"test_name"`
 	TestSubject  string    `json:"test_subject"`
 	TestDuration int       `json:"test_duration"`
@@ -46,6 +47,7 @@ type Test struct {
 type Question struct {
 	gorm.Model
 	ID           int    `gorm:"primaryKey" json:"question_id"`
+	OwnerID      string `json:"owner_id" gorm:"type:varchar(64)"`
 	TestID       int    `json:"test_id"`
 	QuestionName string `json:"question_name"`
 	QuestionType string `json:"question_type"`
@@ -64,7 +66,8 @@ type Answer struct {
 type Attempt struct {
 	gorm.Model
 	ID          int       `gorm:"primaryKey" json:"attempt_id"`
-	UserID      int       `json:"user_id"`
+	OwnerID     string    `json:"owner_id" gorm:"type:varchar(64)"`
+	UserID      string    `json:"user_id" gorm:"type:varchar(64)"`
 	TestID      int       `json:"test_id"`
 	Status      string    `json:"status"` // "active", "completed"
 	Score       float64   `json:"score"`  // 0.0 to 100.0
@@ -75,9 +78,10 @@ type Attempt struct {
 type UserAnswers struct {
 	gorm.Model
 	ID         int    `gorm:"primaryKey" json:"id"`
-	UserID     int    `json:"user_id"`
+	OwnerID    string `json:"owner_id" gorm:"type:varchar(64)"`
+	UserID     string `json:"user_id" gorm:"type:varchar(64)"`
 	AttemptID  int    `json:"attempt_id"`
 	QuestionID int    `json:"question_id"`
 	AnswerID   int    `json:"answer_id"`
-	Value      string `json:"value"` // для текстовых ответов
+	Value      string `json:"value"`
 }
